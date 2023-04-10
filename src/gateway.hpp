@@ -38,7 +38,7 @@ namespace fox {
 
         static auto broadcast_state(Gateway* self) noexcept -> void;
 
-        static auto create_session(Gateway* self) noexcept -> void;
+        static auto create_session(Gateway* self) noexcept -> bool;
 
         static auto update_loop(Gateway* self) noexcept -> void;
 

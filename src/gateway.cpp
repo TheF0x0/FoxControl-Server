@@ -87,7 +87,10 @@ namespace fox {
         spdlog::info("Connecting to {}:{}", address, port);
 
         broadcast_is_online(self, true);
-        create_session(self);
+
+        if(!create_session(self)) {
+            return;
+        }
 
         auto& server = self->_server;
 
@@ -179,7 +182,7 @@ namespace fox {
         check_status(client.Post("/setstate", req_body.dump(), FOX_JSON_MIME_TYPE));
     }
 
-    auto Gateway::create_session(Gateway* self) noexcept -> void {
+    auto Gateway::create_session(Gateway* self) noexcept -> bool {
         auto req_body = nlohmann::json::object();
         req_body["password"] = self->_password;
         req_body["timestamp"] = static_cast<kstd::u64>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
@@ -188,19 +191,21 @@ namespace fox {
 
         if (!check_status(response)) {
             spdlog::warn("Received invalid new session response");
-            return;
+            return false;
         }
 
         auto res_body = nlohmann::json::parse(response->body);
 
         if (!res_body.contains("password")) {
             spdlog::warn("Received invalid new session response");
-            return;
+            return false;
         }
 
         self->_session_password_mutex.lock();
         self->_session_password = res_body["password"];
         spdlog::info("Created session password: {}", self->_session_password);
         self->_session_password_mutex.unlock();
+
+        return true;
     }
 }
