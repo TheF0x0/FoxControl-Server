@@ -49,6 +49,7 @@ namespace fox {
         std::thread _rx_thread;
         std::thread _command_thread;
         std::atomic_bool _is_running;
+        std::atomic_bool _is_busy;
         DeviceState _device_state;
         phmap::parallel_flat_hash_map<std::string, std::function<void()>> _commands;
         atomic_queue::AtomicQueueB2<char> _message_queue;
@@ -89,6 +90,10 @@ namespace fox {
 
         [[nodiscard]] inline auto is_running() const noexcept -> bool {
             return _is_running;
+        }
+
+        [[nodiscard]] inline auto is_busy() const noexcept -> bool {
+            return _is_busy;
         }
 
         [[nodiscard]] inline auto get_actual_speed() const noexcept -> kstd::i32 {

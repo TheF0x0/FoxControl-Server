@@ -88,7 +88,7 @@ namespace fox {
 
         broadcast_is_online(self, true);
 
-        if(!create_session(self)) {
+        if (!create_session(self)) {
             return;
         }
 

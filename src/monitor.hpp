@@ -8,6 +8,7 @@
 #include <atomic>
 #include <thread>
 #include <mutex>
+#include <shared_mutex>
 #include <functional>
 #include <kstd/types.hpp>
 #include <atomic_queue/atomic_queue.h>
@@ -28,6 +29,7 @@ namespace fox {
         Server& _server;
         Gateway& _gateway;
 
+        atomic_queue::AtomicQueueB2<std::function<void()>> _render_tasks;
         std::atomic_bool _is_running;
         std::atomic_bool _is_close_requested;
 
@@ -84,6 +86,12 @@ namespace fox {
 
         auto hide_session_password() noexcept -> void;
 
+        template<typename F>
+        requires(std::is_convertible_v<F, std::function<void()>>)
+        inline auto enqueue_render_task(F&& task) {
+            _render_tasks.push(std::forward<F>(task));
+        }
+
         public:
 
         Monitor(Server& server, Gateway& gateway) noexcept;
@@ -91,6 +99,13 @@ namespace fox {
         ~Monitor() noexcept = default;
 
         auto run() noexcept -> kstd::Result<void>;
+
+        inline auto set_slider_speed(kstd::i32 speed) noexcept -> void {
+            enqueue_render_task([this, speed] {
+                _current_slider_speed = speed;
+                _previous_slider_speed = speed;
+            });
+        }
 
         [[nodiscard]] inline auto is_running() const noexcept -> bool {
             return _is_running;

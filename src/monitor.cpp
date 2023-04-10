@@ -24,6 +24,7 @@ namespace fox {
     Monitor::Monitor(Server& server, Gateway& gateway) noexcept:
             _server(server),
             _gateway(gateway),
+            _render_tasks(2),
             _is_running(true),
             _is_close_requested(false),
             _is_mouse_down(false),
@@ -109,6 +110,12 @@ namespace fox {
                 _is_running = false;
                 _is_close_requested = false;
                 spdlog::info("Requesting window close");
+            }
+
+            std::function<void()> task;
+
+            while (_render_tasks.try_pop(task)) {
+                task();
             }
 
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -303,7 +310,6 @@ namespace fox {
 
         if (cannot_change_state) {
             imgui::pop_disabled();
-
         }
 
         update_speed_if_needed();
@@ -370,12 +376,6 @@ namespace fox {
     }
 
     auto Monitor::update_data() noexcept -> void {
-        const auto target_speed = _server.get_target_speed();
-
-        if (_current_slider_speed != target_speed) {
-            _current_slider_speed = target_speed;
-        }
-
         _previous_speed = _current_speed;
         _current_speed = _server.get_actual_speed();
 

@@ -17,6 +17,7 @@ namespace fox {
             _connection(serial::SerialConnection(std::move(device_name), serial::find_closest_baud_rate(baud_rate))),
             _monitor(),
             _is_running(true),
+            _is_busy(false),
             _commands(),
             _message_queue(2) {
         register_commands();
@@ -54,6 +55,8 @@ namespace fox {
         spdlog::info("Starting serial TX thread");
 
         while (self->_is_running) {
+            self->_is_busy = !self->_message_queue.was_empty();
+
             if (char message = '\0'; self->_message_queue.try_pop(message)) {
                 if (!self->_connection.write(message)) {
                     spdlog::warn("Dropped packet while sending, ignoring");
@@ -221,6 +224,10 @@ namespace fox {
             }
         }
 
+        if (_monitor != nullptr) {
+            _monitor->set_slider_speed(speed);
+        }
+
         _device_state.target_speed = speed;
     }
 
@@ -231,7 +238,12 @@ namespace fox {
 
         _message_queue.push(is_on ? MESSAGE_ON : MESSAGE_OFF);
         _device_state.is_on = is_on;
-        _device_state.target_speed = is_on ? 1 : 0;
+        const auto new_speed = is_on ? 1 : 0;
+        _device_state.target_speed = new_speed;
+
+        if (_monitor != nullptr) {
+            _monitor->set_slider_speed(new_speed);
+        }
     }
 
     auto Server::set_mode(dto::Mode mode) noexcept -> void {
