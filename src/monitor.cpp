@@ -24,7 +24,7 @@ namespace fox {
     Monitor::Monitor(Server& server, Gateway& gateway) noexcept:
             _server(server),
             _gateway(gateway),
-            _render_tasks(2),
+            _render_tasks(),
             _is_running(true),
             _is_close_requested(false),
             _is_mouse_down(false),
@@ -112,10 +112,12 @@ namespace fox {
                 spdlog::info("Requesting window close");
             }
 
-            std::function<void()> task;
-
-            while (_render_tasks.try_pop(task)) {
-                task();
+            {
+                std::scoped_lock lock(_task_queue_mutex);
+                while (!_render_tasks.empty()) {
+                    _render_tasks.front()();
+                    _render_tasks.pop();
+                }
             }
 
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -281,7 +283,7 @@ namespace fox {
         }
 
         if (ImGui::BeginCombo("Mode", current_mode_name.c_str())) {
-            for (size_t i = 0; i < NUM_MODES; i++) {
+            for (size_t i = 0; i < NUM_MODES; ++i) {
                 const auto entry_mode = MODES[i];
                 const auto mode_name = get_mode_name(entry_mode);
 

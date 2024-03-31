@@ -7,6 +7,7 @@
 
 #include <atomic>
 #include <thread>
+#include <queue>
 #include <mutex>
 #include <shared_mutex>
 #include <functional>
@@ -17,7 +18,8 @@
 struct SDL_Window;
 union SDL_Event;
 
-namespace fox {
+namespace fox
+{
     constexpr kstd::usize NUM_SPEED_HISTORY_ENTRIES = 32;
     constexpr kstd::usize MAX_CONSOLE_BUFFER_SIZE = 256;
 
@@ -25,11 +27,13 @@ namespace fox {
 
     class Gateway;
 
-    class Monitor final {
+    class Monitor final
+    {
         Server& _server;
         Gateway& _gateway;
 
-        atomic_queue::AtomicQueueB2<std::function<void()>> _render_tasks;
+        std::queue<std::function<void()>> _render_tasks;
+        std::mutex _task_queue_mutex;
         std::atomic_bool _is_running;
         std::atomic_bool _is_close_requested;
 
@@ -86,78 +90,93 @@ namespace fox {
 
         auto hide_session_password() noexcept -> void;
 
-        template<typename F>
-        requires(std::is_convertible_v<F, std::function<void()>>)
-        inline auto enqueue_render_task(F&& task) {
+        template <typename F>
+            requires(std::is_convertible_v<F, std::function<void()>>)
+        inline auto enqueue_render_task(F&& task)
+        {
+            std::scoped_lock lock(_task_queue_mutex);
             _render_tasks.push(std::forward<F>(task));
         }
 
-        public:
-
+    public:
         Monitor(Server& server, Gateway& gateway) noexcept;
 
         ~Monitor() noexcept = default;
 
         auto run() noexcept -> kstd::Result<void>;
 
-        inline auto set_slider_speed(kstd::i32 speed) noexcept -> void {
-            enqueue_render_task([this, speed] {
+        inline auto set_slider_speed(kstd::i32 speed) noexcept -> void
+        {
+            enqueue_render_task([this, speed]
+            {
                 _current_slider_speed = speed;
                 _previous_slider_speed = speed;
             });
         }
 
-        [[nodiscard]] inline auto is_running() const noexcept -> bool {
+        [[nodiscard]] inline auto is_running() const noexcept -> bool
+        {
             return _is_running;
         }
 
-        inline auto request_close() noexcept -> void {
+        inline auto request_close() noexcept -> void
+        {
             _is_close_requested = true;
         }
 
-        inline auto log_device(const std::string_view& s) noexcept -> void {
-            if (!_is_running) {
+        inline auto log_device(const std::string_view& s) noexcept -> void
+        {
+            if (!_is_running)
+            {
                 return;
             }
 
             std::scoped_lock lock(_device_log_mutex);
 
-            if (_device_log_buffer.size() == MAX_CONSOLE_BUFFER_SIZE) {
+            if (_device_log_buffer.size() == MAX_CONSOLE_BUFFER_SIZE)
+            {
                 _device_log_buffer.erase(_device_log_buffer.begin());
             }
 
             _device_log_buffer.emplace_back(s);
         }
 
-        inline auto log_gateway(const std::string_view& s) noexcept -> void {
-            if (!_is_running) {
+        inline auto log_gateway(const std::string_view& s) noexcept -> void
+        {
+            if (!_is_running)
+            {
                 return;
             }
 
             std::scoped_lock lock(_gateway_log_mutex);
 
-            if (_gateway_log_buffer.size() == MAX_CONSOLE_BUFFER_SIZE) {
+            if (_gateway_log_buffer.size() == MAX_CONSOLE_BUFFER_SIZE)
+            {
                 _gateway_log_buffer.erase(_gateway_log_buffer.begin());
             }
 
             _gateway_log_buffer.emplace_back(s);
         }
 
-        inline auto clear_device_log() noexcept -> void {
+        inline auto clear_device_log() noexcept -> void
+        {
             std::scoped_lock lock(_device_log_mutex);
             _device_log_buffer.clear();
         }
 
-        inline auto clear_gateway_log() noexcept -> void {
+        inline auto clear_gateway_log() noexcept -> void
+        {
             std::scoped_lock lock(_gateway_log_mutex);
             _gateway_log_buffer.clear();
         }
 
-        [[nodiscard]] inline auto get_server() noexcept -> Server& {
+        [[nodiscard]] inline auto get_server() noexcept -> Server&
+        {
             return _server;
         }
 
-        [[nodiscard]] inline auto get_gateway() noexcept -> Gateway& {
+        [[nodiscard]] inline auto get_gateway() noexcept -> Gateway&
+        {
             return _gateway;
         }
     };

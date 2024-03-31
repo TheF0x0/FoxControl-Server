@@ -7,10 +7,12 @@
 
 #include <atomic>
 #include <mutex>
+#include <queue>
 #include <functional>
 #include <parallel_hashmap/phmap.h>
 #include <atomic_queue/atomic_queue.h>
 #include <kstd/types.hpp>
+#include <mutex>
 #include "serial.hpp"
 #include "dto.hpp"
 
@@ -52,7 +54,8 @@ namespace fox {
         std::atomic_bool _is_busy;
         DeviceState _device_state;
         phmap::parallel_flat_hash_map<std::string, std::function<void()>> _commands;
-        atomic_queue::AtomicQueueB2<char> _message_queue;
+        std::queue<char> _message_queue;
+        std::mutex _queue_mutex;
 
         static auto handle_feedback(Server* self, const std::string& feedback) noexcept -> void;
 

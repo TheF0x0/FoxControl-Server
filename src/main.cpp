@@ -29,7 +29,7 @@ auto main(int num_args, char** args) -> int {
        ("r,rate", "Specify the serial IO baud rate", cxxopts::value<kstd::u32>()->default_value("19200"))
        ("a,address", "Specify the address of the HTTP gateway to connect to", cxxopts::value<std::string>())
        ("p,port", "Specify the port of the HTTP gateway to connect to", cxxopts::value<kstd::u32>()->default_value("443"))
-       ("u,updaterate", "Specify the gateway fetch rate in milliseconds", cxxopts::value<kstd::u32>()->default_value("250"))
+       ("u,updaterate", "Specify the gateway fetch rate in milliseconds", cxxopts::value<kstd::u32>()->default_value("500"))
        ("c,certificate", "Specify the X509 certificate to use for gateway requests", cxxopts::value<std::string>()->default_value("./certificate.crt"))
        ("P,password", "Specify the password with which to authenticate against the gateway", cxxopts::value<std::string>())
        ("m,monitor", "Open the local monitor UI (Requires OpenGL 3.3)")
